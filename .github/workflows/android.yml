@@ -65,9 +65,10 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          mkdir -p island-lost-godot/build
-          godot --headless --path island-lost-godot --export-debug "Android" island-lost-godot/build/IslandLost.apk
-          test -s island-lost-godot/build/IslandLost.apk
+          cd island-lost-godot
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/IslandLost.apk
+          test -s build/IslandLost.apk
       - uses: actions/upload-artifact@v4
         with:
           name: IslandLost-apk
