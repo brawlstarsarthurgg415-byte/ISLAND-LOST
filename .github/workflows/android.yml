@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'IslandLost_Godot_v2.zip'
+      - 'island-lost-godot/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,10 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extrair projeto
+      - name: Preparar projeto
         run: |
-          test -f IslandLost_Godot_v2.zip || { echo "Envie IslandLost_Godot_v2.zip para a raiz do repositorio."; exit 1; }
-          unzip -q IslandLost_Godot_v2.zip
+          if [ -f IslandLost_Godot_v2.zip ]; then
+            unzip -q -o IslandLost_Godot_v2.zip
+          fi
+          test -f island-lost-godot/project.godot || {
+            echo "Projeto Godot não encontrado. Esperado: island-lost-godot/project.godot"
+            exit 1
+          }
+          test -f island-lost-godot/export_presets.cfg
+          test -f island-lost-godot/scenes/menu.tscn
 
       - uses: actions/setup-java@v4
         with:
