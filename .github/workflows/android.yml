@@ -13,35 +13,30 @@ permissions:
 
 env:
   GODOT_VERSION: "4.3"
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
 jobs:
   android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Preparar projeto
         run: |
-          if [ -f IslandLost_Godot_v2.zip ]; then
-            unzip -q -o IslandLost_Godot_v2.zip
-          fi
-          test -f island-lost-godot/project.godot || {
-            echo "Projeto Godot não encontrado. Esperado: island-lost-godot/project.godot"
-            exit 1
-          }
+          if [ -f IslandLost_Godot_v2.zip ]; then unzip -q -o IslandLost_Godot_v2.zip; fi
+          test -f island-lost-godot/project.godot
           test -f island-lost-godot/export_presets.cfg
           test -f island-lost-godot/scenes/menu.tscn
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
-      - uses: android-actions/setup-android@v3
-
-      - name: Instalar componentes Android
-        run: sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
-
+      - name: Configurar Android SDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort | tail -n 1)"
+          echo "SDK manager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platform-tools" "build-tools;34.0.0" "platforms;android-34"
       - name: Baixar Godot e templates Android
         run: |
           BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
@@ -52,22 +47,18 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -d templates
           mv templates/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
-
-      - name: Configurar keystore e SDK
+      - name: Configurar keystore e SDK no Godot
         run: |
           keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -deststoretype pkcs12
           mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-4.tres" <<SETTINGS
           [gd_resource type="EditorSettings" format=3]
-
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
           SETTINGS
-
       - name: Importar recursos
         run: godot --headless --path island-lost-godot --editor --quit
-
       - name: Exportar APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/debug.keystore
@@ -77,12 +68,10 @@ jobs:
           mkdir -p island-lost-godot/build
           godot --headless --path island-lost-godot --export-debug "Android" island-lost-godot/build/IslandLost.apk
           test -s island-lost-godot/build/IslandLost.apk
-
       - uses: actions/upload-artifact@v4
         with:
           name: IslandLost-apk
           path: island-lost-godot/build/IslandLost.apk
-
       - name: Publicar APK em Releases
         uses: softprops/action-gh-release@v2
         with:
